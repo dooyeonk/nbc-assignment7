@@ -2,21 +2,30 @@
 #include "EnhancedInputSubsystems.h"
 
 AMyPlayerController::AMyPlayerController()
-	: InputMappingContext(nullptr), LookAction(nullptr), MoveAction(nullptr)
+	: InputMappingContext(nullptr), AirCraftInputMappingContext(nullptr), LookAction(nullptr), MoveAction(nullptr),
+	  RollAction(nullptr), InteractAction(nullptr)
 {
 }
 
 void AMyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	SwitchMappingContext(false);
+}
 
-	if (!InputMappingContext) return;
-
+void AMyPlayerController::SwitchMappingContext(bool bIsAirCraft)
+{
 	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer) return;
 
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 	{
-		Subsystem->AddMappingContext(InputMappingContext, 0);
+		Subsystem->ClearAllMappings();
+
+		if (const UInputMappingContext* ContextToApply =
+			bIsAirCraft ? AirCraftInputMappingContext : InputMappingContext)
+		{
+			Subsystem->AddMappingContext(ContextToApply, 0);
+		}
 	}
 }

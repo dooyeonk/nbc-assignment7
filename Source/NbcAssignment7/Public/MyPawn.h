@@ -18,6 +18,8 @@ class NBCASSIGNMENT7_API AMyPawn : public APawn
 public:
 	AMyPawn();
 	
+	void Interact();
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UCapsuleComponent* CapsuleComp;
 
@@ -36,8 +38,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	float LookSensitivity = 50.0f;
 protected:
-	virtual void BeginPlay() override;
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	UFUNCTION()

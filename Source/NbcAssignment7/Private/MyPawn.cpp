@@ -1,5 +1,6 @@
 #include "MyPawn.h"
 
+#include "AirCraft.h"
 #include "EnhancedInputComponent.h"
 #include "MyPlayerController.h"
 #include "Camera/CameraComponent.h"
@@ -29,9 +30,19 @@ AMyPawn::AMyPawn()
 	CameraComp->bUsePawnControlRotation = false;
 }
 
-void AMyPawn::BeginPlay()
+void AMyPawn::Interact()
 {
-	Super::BeginPlay();
+	FHitResult Hit;
+	FVector Start = GetActorLocation();
+	FVector End = Start + (GetActorForwardVector() * 300.0f);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility))
+	{
+		if (AAirCraft* Craft = Cast<AAirCraft>(Hit.GetActor()))
+		{
+			Craft->Ride(this);
+		}
+	}
 }
 
 void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -52,17 +63,22 @@ void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	{
 		EnhancedInput->BindAction(PlayerController->LookAction, ETriggerEvent::Triggered, this, &AMyPawn::Look);
 	}
+	
+	if (PlayerController->InteractAction)
+	{
+		EnhancedInput->BindAction(PlayerController->InteractAction, ETriggerEvent::Triggered, this, &AMyPawn::Interact);
+	}
 }
 
 void AMyPawn::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	const FVector2D MoveInput = Value.Get<FVector2D>();
+	const FVector MoveInput = Value.Get<FVector>();
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-	FVector LocalMoveVector = FVector(MoveInput.X, MoveInput.Y, 0.f);
-	FVector NewLocation = LocalMoveVector * MoveSpeed * DeltaTime;
+	const FVector LocalMoveVector = FVector(MoveInput.X, MoveInput.Y, 0.f);
+	const FVector NewLocation = LocalMoveVector * MoveSpeed * DeltaTime;
 
 	AddActorLocalOffset(NewLocation, true);
 }
@@ -74,15 +90,15 @@ void AMyPawn::Look(const FInputActionValue& Value)
 	const FVector2D LookInput = Value.Get<FVector2D>();
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-	float YawChange = LookInput.X * LookSensitivity * DeltaTime;
-	float PitchChange = LookInput.Y * LookSensitivity * DeltaTime * -1.0f;
+	const float YawChange = LookInput.X * LookSensitivity * DeltaTime;
+	const float PitchChange = LookInput.Y * LookSensitivity * DeltaTime * -1.0f;
 
 	AddActorLocalRotation(FRotator(0.f, YawChange, 0.f));
 
 	if (SpringArmComp)
 	{
-		FRotator CurrentSpringRot = SpringArmComp->GetRelativeRotation();
-		float NewPitch = FMath::Clamp(CurrentSpringRot.Pitch + PitchChange, -60.f, 60.f);
+		const FRotator CurrentSpringRot = SpringArmComp->GetRelativeRotation();
+		const float NewPitch = FMath::Clamp(CurrentSpringRot.Pitch + PitchChange, -60.f, 60.f);
         
 		SpringArmComp->SetRelativeRotation(FRotator(NewPitch, 0.f, 0.f));
 	}
