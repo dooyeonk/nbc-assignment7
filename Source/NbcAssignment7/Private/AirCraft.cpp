@@ -2,16 +2,19 @@
 
 #include "EnhancedInputComponent.h"
 #include "MyPlayerController.h"
+#include "SceneRenderTargetParameters.h"
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
 AAirCraft::AAirCraft()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	
-	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComp"));
-	RootComponent = CapsuleComp;
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComp"));
+	RootComponent = BoxComp;
+	BoxComp->SetCollisionProfileName(TEXT("Pawn"));
+	BoxComp->SetUseCCD(true);
 	
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
 	MeshComp->SetupAttachment(RootComponent);
@@ -36,6 +39,7 @@ void AAirCraft::Ride(APawn* PlayerPawn)
 	SavedPlayerPawn = PlayerPawn;
 	if (AMyPlayerController* PlayerController = Cast<AMyPlayerController>(PlayerPawn->GetController()))
 	{
+		Velocity = FVector::ZeroVector;
 		SavedPlayerPawn->SetActorHiddenInGame(true);
 		SavedPlayerPawn->SetActorEnableCollision(false);
 		
@@ -89,14 +93,37 @@ void AAirCraft::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	}
 }
 
+void AAirCraft::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	
+	CheckGround();
+	
+	if (GetController())
+	{
+		Velocity.Z += 0.f;
+	}
+	else
+	{
+		Velocity.Z += GravityConstant * DeltaTime;
+	}
+
+	if (!Velocity.IsNearlyZero())
+	{
+		AddActorWorldOffset(Velocity * DeltaTime, true);
+	}
+}
+
 void AAirCraft::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
-	
+    
 	const FVector MoveInput = Value.Get<FVector>();
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+	const float CurrentSpeed = bIsFlightMode ? (MoveSpeed * AirControlMultiplier) : MoveSpeed;
 	
-	FVector NewLocation = MoveInput * MoveSpeed * DeltaTime;
+	FVector NewLocation = MoveInput * CurrentSpeed * DeltaTime;
 	AddActorLocalOffset(NewLocation, true);
 }
 
@@ -123,6 +150,31 @@ void AAirCraft::Roll(const FInputActionValue& Value)
 	if (FMath::IsNearlyZero(RollInput)) return;
 	
 	AddActorLocalRotation(FRotator(0.f, 0.f, RollInput * RotationSpeed * DeltaTime));
+}
+
+void AAirCraft::CheckGround()
+{
+	FHitResult Hit;
+	FVector Start = GetActorLocation();
+	float BoxHalfHeight = BoxComp->GetScaledBoxExtent().Z;
+	float TraceDistance = BoxHalfHeight + 20.0f;
+	FVector End = Start + (FVector::DownVector * TraceDistance);
+	
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	{
+		bIsFlightMode = false;
+		
+		FVector NewLocation = GetActorLocation();
+		NewLocation.Z = Hit.Location.Z + BoxHalfHeight + 10.0f;
+		SetActorLocation(NewLocation);
+	}
+	else
+	{
+		bIsFlightMode = true;
+	}
 }
 
 

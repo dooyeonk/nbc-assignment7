@@ -9,7 +9,7 @@
 
 AMyPawn::AMyPawn()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComp"));
 	RootComponent = CapsuleComp;
@@ -67,6 +67,47 @@ void AMyPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	if (PlayerController->InteractAction)
 	{
 		EnhancedInput->BindAction(PlayerController->InteractAction, ETriggerEvent::Triggered, this, &AMyPawn::Interact);
+	}
+}
+
+void AMyPawn::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	
+	CheckGround();
+	ApplyGravity(DeltaTime);
+	
+	AddActorWorldOffset(Velocity * DeltaTime, true);
+}
+
+void AMyPawn::ApplyGravity(float DeltaTime)
+{
+	if (bIsFalling)
+	{
+		Velocity.Z += GravityConstant * DeltaTime;
+	}
+}
+
+void AMyPawn::CheckGround()
+{
+	FHitResult Hit;
+	FVector Start = GetActorLocation();
+	FVector End = Start + (FVector::DownVector * 32.0f);
+	
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	{
+		if (bIsFalling)
+		{
+			bIsFalling = false;
+			Velocity.Z = 0.f;
+		}
+	}
+	else
+	{
+		bIsFalling = true;
 	}
 }
 

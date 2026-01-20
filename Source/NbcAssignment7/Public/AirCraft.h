@@ -4,9 +4,9 @@
 #include "GameFramework/Pawn.h"
 #include "AirCraft.generated.h"
 
+class UBoxComponent;
 struct FInputActionValue;
 
-class UCapsuleComponent;
 class UStaticMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
@@ -25,6 +25,7 @@ public:
 
 protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Tick(float DeltaTime) override;
 	
 	UFUNCTION()
 	void Move(const FInputActionValue& Value);
@@ -34,7 +35,7 @@ protected:
 	void Roll(const FInputActionValue& Value);
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UCapsuleComponent* CapsuleComp;
+	UBoxComponent* BoxComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* MeshComp;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -45,8 +46,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	float MoveSpeed = 1500.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	float AirControlMultiplier = 0.5f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	float RotationSpeed = 100.f;
 	
 	UPROPERTY()
 	APawn* SavedPlayerPawn;
+	
+	UPROPERTY(EditAnywhere, Category = "Physics")
+	float GravityConstant = -980.f;
+	bool bIsFlightMode = true;
+	FVector Velocity = FVector::ZeroVector;
+	
+	void CheckGround();
 };
