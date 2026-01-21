@@ -16,6 +16,10 @@ AMyPawn::AMyPawn()
 
 	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComp"));
 	SkeletalMeshComp->SetupAttachment(RootComponent);
+	if (SkeletalMeshComp->IsSimulatingPhysics())
+	{
+		SkeletalMeshComp->SetSimulatePhysics(false);
+	}	
 
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
 	SpringArmComp->SetupAttachment(RootComponent);
